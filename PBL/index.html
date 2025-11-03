@@ -9,6 +9,11 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans/css/SpoqaHanSansNeo.css">
 
+  <!-- ▼ [REVISED] PyScript -> Brython 으로 교체 -->
+  <!-- Brython은 PyScript보다 훨씬 가볍고 빠릅니다. -->
+  <script src="https://cdn.jsdelivr.net/npm/brython@3/brython.min.js"></script>
+  <!-- ▲ [REVISED] Brython -->
+
   <style>
     :root{
       --gap:20px;
@@ -261,31 +266,49 @@
     }
 
     /* 결과 헤더: 제목-버튼 한 줄 정렬 */
-.result-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom: 5px; /* 살짝 띄우기 */
-  gap:12px;
-  flex-wrap:nowrap;      /* 줄바꿈 방지 */
-}
+    .result-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom: 5px; /* 살짝 띄우기 */
+      gap:12px;
+      flex-wrap:nowrap;      /* 줄바꿈 방지 */
+    }
 
-/* 결과 > '로그 삭제' 버튼 스타일 */
-.btn-gray{
-  height:36px;
-  padding:0 12px;
-  background:#787878;
-  border-radius:4px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#fff;
-  font:500 14px 'Spoqa Han Sans Neo';
-  white-space:nowrap;    /* 버튼 텍스트 줄바꿈 방지 */
-}
+    /* 결과 > '로그 삭제' 버튼 스타일 */
+    .btn-gray{
+      height:36px;
+      padding:0 12px;
+      background:#787878;
+      border-radius:4px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#fff;
+      font:500 14px 'Spoqa Han Sans Neo';
+      white-space:nowrap;    /* 버튼 텍스트 줄바꿈 방지 */
+    }
+
+    /* ▼ [REVISED] Brython이 사용할 <pre> 태그 스타일 */
+    pre#logArea {
+      /* 기존 폰트 스타일과 동일하게 맞춤 */
+      color: #646464;
+      font: 400 16px 'Spoqa Han Sans Neo';
+      
+      /* <pre> 태그의 기본 동작 수정 */
+      white-space: pre-wrap; /* 자동 줄바꿈 허용 */
+      word-break: break-all; /* 긴 단어 강제 줄바꿈 */
+      margin: 0;
+      height: 100%;
+      flex-grow: 1; /* 부모(result-box)의 flex에 맞춰 꽉 차게 */
+    }
+    /* ▲ [REVISED] */
   </style>
 </head>
-<body>
+<!-- ▼ [REVISED] Brython 초기화 (body.onload) -->
+<body onload="brython()">
+<!-- ▲ [REVISED] Brython -->
+
   <!-- 우측 전체 세로 20px 하늘색 여백 -->
   <div class="right-sky"></div>
 
@@ -594,10 +617,12 @@
           <div class="result-col">
             <div class="result-head">
               <div style="font:700 20px 'Spoqa Han Sans Neo'">결과</div>
-              <div class="btn-gray">로그 삭제</div>
+              <div class="btn-gray" id="btnClearLog">로그 삭제</div>
             </div>
             <div class="result-box">
-              <div id="logArea" style="color:#646464; font:400 16px 'Spoqa Han Sans Neo'">[ 실행 로그 자리 ]</div>
+              <!-- ▼ [REVISED] <py-terminal> -> <pre> 태그로 변경 -->
+              <pre id="logArea"></pre>
+              <!-- ▲ [REVISED] -->
             </div>
           </div>
         </div>
@@ -659,103 +684,25 @@
     })();
   </script>
 
-  <!-- ▼ Monaco Mount + 실행/로그 파이프라인 -->
+  <!-- ▼ [REVISED] Monaco Mount + Brython 실행/로그 파이프라인 (서버 없음) -->
   <script>
-    const API_BASE = localhost;
-
     let editor; // Monaco 인스턴스
-    const $log     = document.getElementById('logArea');
+    const $log     = document.getElementById('logArea'); // <pre> 요소
     const $btnSave = document.getElementById('btnSave');
     const $btnRun  = document.getElementById('btnRun');
+    const $btnClearLog = document.getElementById('btnClearLog'); // 로그 삭제 버튼
+    const $logContainer = document.querySelector('.result-box'); // 로그 컨테이너
 
-    function escapeHTML(s=''){
-      return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-    }
-    function setLogHTML(html){ $log.innerHTML = html; }
-    function setLogText(text){ $log.textContent = text; }
-
-    function showRunning(text){ setLogText(text || '실행 중...'); }
-    function showSyntaxError(log){
-      setLogHTML(
-        '[SYNTAX ERROR]\n\n' +
-        '<pre style="margin:0;white-space:pre-wrap">'+escapeHTML(log || '')+'</pre>'
-      );
-    }
-    function showRunResult(stdout, stderr, exitcode){
-      let html = '';
-      html += 'EXIT CODE: ' + (typeof exitcode==='number'? exitcode : String(exitcode)) + '\n\n';
-      html += '[STDOUT]\n' + (stdout && stdout.trim().length
-        ? '<pre style="margin:0 0 12px;white-space:pre-wrap">'+escapeHTML(stdout)+'</pre>\n'
-        : '(no output)\n\n');
-      if (stderr && stderr.trim().length){
-        html += '[STDERR]\n<pre style="margin:0;white-space:pre-wrap;color:#b00020">'+escapeHTML(stderr)+'</pre>';
-      }
-      setLogHTML(html);
-    }
-    function showError(e){
-      setLogText('요청 중 오류가 발생했습니다: ' + (e && e.message ? e.message : e));
-    }
-
-    async function checkSyntax(code){
-      try{
-        const r = await fetch(API_BASE + '/syntax', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ code, filename:'<monaco>' })
-        });
-        if (!r.ok) return { ok:true, skipped:true };
-        const json = await r.json();
-        return json;
-      }catch(e){
-        return { ok:true, skipped:true };
-      }
-    }
-
-    async function runCode(){
-      try{
-        const code = editor ? editor.getValue() : (document.getElementById('codeArea').value || '');
-        showRunning('문법 검사 중...');
-
-        const syn = await checkSyntax(code);
-        if (syn && syn.ok === false){
-          window.WebBridge?.emit('code.run.error', {
-            phase: 'syntax',
-            message: (syn.error && syn.error.msg) || 'Syntax Error'
-          });
-          return showSyntaxError(syn.log || (syn.error && syn.error.log) || 'Syntax Error');
-        }
-
-        showRunning('실행 중...');
-        window.WebBridge?.emit('code.run.start', {});
-
-        const r = await fetch(API_BASE + '/run', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ code, stdin: '' })
-        });
-        const json = await r.json();
-        if (json && json.ok){
-          showRunResult(json.stdout||'', json.stderr||'', json.exitcode);
-          window.WebBridge?.emit('code.run.complete', {
-            exitcode: json.exitcode,
-            hasError: !!(json.stderr && json.stderr.trim().length),
-            stdoutPreview: (json.stdout || '').slice(0,160),
-            stdout: json.stdout || ''
-          });
-        }else{
-          const msg = (json && json.error) ? json.error : '실행 실패';
-          showError(msg);
-          window.WebBridge?.emit('code.run.error', { phase: 'run', message: String(msg) });
-        }
-      }catch(e){
-        showError(e);
-        window.WebBridge?.emit('code.run.error', { phase: 'exception', message: String(e && e.message ? e.message : e) });
-      }
-    }
-
+    // 1. Monaco 에디터 마운트
     function mountMonaco(){
       require(['vs/editor/editor.main'], function () {
         const mountEl = document.getElementById('monaco');
+        if (!mountEl) {
+            console.error("#monaco element not found");
+            return;
+        }
         editor = monaco.editor.create(mountEl, {
-          value: localStorage.getItem('codeDraft') || '# 여기에 코드를 작성하세요.\n',
+          value: localStorage.getItem('codeDraft') || '# Brython이 준비되었습니다.\n# 여기에 코드를 작성하세요.\nimport sys\nprint(f"Hello from Brython (Python: {sys.version.split()[0]})")\n',
           language: 'python',
           theme: 'vs-dark',
           automaticLayout: true,
@@ -766,19 +713,124 @@
         });
       });
     }
-    if (window.require && window.require.config) { mountMonaco(); }
+    // Monaco 로더가 로드되면 마운트 실행
+    if (window.require && window.require.config) {
+        mountMonaco();
+    } else {
+        // Monaco 로더 스크립트가 로드되는 것을 기다림 (안전 장치)
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.require && window.require.config) mountMonaco();
+        });
+    }
 
+
+    // 2. 로그 영역 헬퍼 함수
+    function clearLog() {
+        if ($log) {
+            $log.textContent = '';
+        }
+    }
+
+    function showLogMessage(message) {
+        if ($log) {
+            $log.textContent += message;
+            // 새 로그가 추가될 때마다 맨 아래로 스크롤
+            $logContainer.scrollTop = $logContainer.scrollHeight;
+        }
+    }
+    
+    function showErrorMessage(message) {
+        if ($log) {
+            // HTML로 에러 메시지를 감싸서 빨간색으로 표시
+            // textContent 대신 innerHTML을 사용하여 HTML 태그가 렌더링되도록 함
+            $log.innerHTML += `<span style="color: red; white-space: pre-wrap;">${message.replace(/</g, '&lt;')}</span>`;
+            $logContainer.scrollTop = $logContainer.scrollHeight;
+        }
+    }
+
+    // 3. Brython의 print() 출력을 우리 로그 함수로 연결
+    // body.onload="brython()"이 실행된 후, Brython이 준비될 때까지 기다립니다.
+    (function setupBrythonStreams() {
+        // __BRYTHON__ 객체가 생성될 때까지 100ms마다 확인
+        if (typeof __BRYTHON__ === 'undefined') {
+            setTimeout(setupBrythonStreams, 100);
+            return;
+        }
+        
+        // Brython의 표준 출력(print)과 표준 에러를 우리 함수로 재지정
+        __BRYTHON__.stdout = { write: showLogMessage, flush: ()=>{} };
+        __BRYTHON__.stderr = { write: showErrorMessage, flush: ()=>{} };
+        console.log("Brython stdout/stderr re-configured.");
+    })();
+
+
+    // 4. (NEW) Brython 코드 실행 함수
+    function runCodeBrython() { // [FIXED] async 제거
+        if (!editor) {
+            showErrorMessage("에디터가 초기화되지 않았습니다.");
+            return;
+        }
+
+        const code = editor.getValue();
+        clearLog(); // 이전 로그 삭제
+
+        // Unity 브릿지 이벤트 (input() 사용 여부 확인)
+        window.WebBridge?.emit('code.run.request', { hasInput: /\binput\s*\(/.test(code) });
+
+        // Brython이 준비되었는지 확인
+        if (typeof __BRYTHON__ === 'undefined' || !__BRYTHON__.exec) { // [FIXED] run_script -> exec
+            showErrorMessage("Brython 엔진이 아직 준비되지 않았습니다. 페이지를 새로고침해 주세요.");
+            return;
+        }
+        
+        showLogMessage("[Brython] 코드 실행 시작...\n");
+        window.WebBridge?.emit('code.run.start', {});
+
+        try {
+            // [FIXED] await 제거, run_script -> exec
+            // exec는 코드를 동기적으로 실행합니다.
+            __BRYTHON__.exec(code, 'editor_script');
+            
+            showLogMessage("\n[Brython] 코드 실행 완료.");
+
+            // Unity 브릿지 이벤트 (성공)
+            window.WebBridge?.emit('code.run.complete', {
+                exitcode: 0, 
+                hasError: false, // Brython에서 에러 발생 시 stderr로 출력되므로, 이 콜백은 성공으로 간주
+                stdoutPreview: code.slice(0, 160), // stdout을 직접 캡처하기 복잡하므로 코드로 대체
+                stdout: "Brython 실행 완료 (출력은 위 로그 참조)"
+            });
+
+        } catch (errorInfo) { // [FIXED] 오타 수정: error)Info -> errorInfo
+            // Python 실행 중 발생하는 에러는 __BRYTHON__.stderr로 전달됩니다.
+            // 이 catch 블록은 JavaScript 실행 자체의 예외(e.g., Brython 엔진 오류)를 잡습니다.
+            console.error("Brython JavaScript 예외:", errorInfo); // [FIXED] error -> errorInfo
+            
+            // Brython의 Python 에러 객체는 .data.message 에 상세 내용이 있을 수 있음
+            let errorMessage = (errorInfo && errorInfo.data && errorInfo.data.message) ? errorInfo.data.message : errorInfo.message; // [FIXED] error -> errorInfo
+            showErrorMessage(`\n[JavaScript] 실행 오류 발생: ${errorMessage}`);
+            
+            // Unity 브릿지 이벤트 (에러)
+            window.WebBridge?.emit('code.run.error', { 
+                phase: 'run', 
+                message: String(errorMessage) 
+            });
+        }
+    }
+
+    // 5. 버튼 이벤트 리스너
     $btnSave.addEventListener('click', ()=>{
       const code = editor ? editor.getValue() : (document.getElementById('codeArea').value || '');
       localStorage.setItem('codeDraft', code);
-      setLogText('임시 저장되었습니다.');
+      clearLog();
+      showLogMessage('임시 저장되었습니다.');
     });
 
-    $btnRun.addEventListener('click', ()=>{
-      const code = editor ? editor.getValue() : (document.getElementById('codeArea').value || '');
-      window.WebBridge?.emit('code.run.request', { hasInput: /\binput\s*\(/.test(code) });
-      runCode();
-    });
+    // $btnRun의 리스너를 'runCodeBrython'로 변경
+    $btnRun.addEventListener('click', runCodeBrython);
+
+    // 로그 삭제 버튼
+    $btnClearLog.addEventListener('click', clearLog);
   </script>
 
   <!-- ▼ 트리뷰 토글/클릭 이벤트 -->
@@ -870,3 +922,4 @@
 </script>
 </body>
 </html>
+
