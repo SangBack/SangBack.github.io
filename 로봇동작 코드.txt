@@ -1,0 +1,92 @@
+1. 암호코드
+print("Hello. World!")
+
+
+
+
+1. [타겟 찾는 기능 코드(파란)]
+--------------------------------------------------------------------
+from typing import List, Optional
+class RobotArm:
+    def __init__(self) -> None:
+        self.holding: Optional[str] = None
+        self.log: List[str] = []
+    def pick(self, box: str) -> None:
+        if self.holding is not None:
+            raise RuntimeError("이미 상자를 잡고 있습니다.")
+        if box != "파란 상자":
+            return
+        self.holding = box
+        self.log.append(f"pick {box}")
+    def place(self, location: str) -> None:
+        if self.holding is None:
+            raise RuntimeError("내려놓을 상자가 없습니다.")
+        box = self.holding
+        self.log.append(f"place {box} at {location}")
+        self.holding = None
+def solution() -> List[str]:
+    arm = RobotArm()
+    arm.pick("파란 상자")
+    return arm.log
+# 예시 실행
+if __name__ == "__main__":
+    print(solution()) 
+-------------------------------------------------------------------
+
+
+
+2.[타겟 찾는 기능 코드(빨간)]
+-------------------------------------------------------------------
+from typing import List, Optional
+class RobotArm:
+    def __init__(self) -> None:
+        self.holding: Optional[str] = None
+        self.log: List[str] = []
+    def pick(self, box: str) -> None:
+        if self.holding is not None:
+            raise RuntimeError("이미 상자를 잡고 있습니다.")
+        if box != "빨간 상자":
+            return
+        self.holding = box
+        self.log.append(f"pick {box}")
+    def place(self, location: str) -> None:
+        if self.holding is None:
+            raise RuntimeError("내려놓을 상자가 없습니다.")
+        box = self.holding
+        self.log.append(f"place {box} at {location}")
+        self.holding = None
+def solution() -> List[str]:
+    arm = RobotArm()
+    arm.pick("빨간 상자")
+    return arm.log
+# 예시 실행
+if __name__ == "__main__":
+    print(solution()) 
+-------------------------------------------------------------------
+
+
+3. [로봇팔 움직이는 코드]
+-----------------------------------------------------------------------
+def move_robot_arm_to_conveyor():
+    class RobotArm:
+        def __init__(self):
+            self.holding = None
+
+        def pick(self, cube):
+            self.holding = cube
+
+        def place(self, location):
+            self.holding = None
+
+    # 로봇팔 생성 및 동작 (큐브는 임의로 지정)
+    arm = RobotArm()
+    arm.pick("상자")
+    arm.place("컨베이어")
+
+    # 최종 결과
+    return "move"
+
+
+# 테스트 실행
+print(move_robot_arm_to_conveyor())
+--------------------------------------------------------------

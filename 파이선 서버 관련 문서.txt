@@ -1,0 +1,27 @@
+서비스 재시작 (코드 변경 후):
+sudo systemctl restart flask
+서비스 시작:
+sudo systemctl start flask
+서비스 중지:
+sudo systemctl stop flask
+서비스 상태 확인:
+sudo systemctl status flask
+실시간 로그보기:
+sudo journalctl -u flask -f
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SSH 접속 정보
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Host: 192.168.0.186
+Port: 22
+Username: ubuntu
+Password: ubuntu
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Command:
+ssh ubuntu@192.168.0.186
+
+
+파이썬 동작중인 url :  https://pbl.telosdev.net
+파이썬 동작 확인용 url : https://pbl.telosdev.net/health

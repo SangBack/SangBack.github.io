@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>학습 진행 · Unity WebGL (파일 탐색기 추가)</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans/css/SpoqaHanSansNeo.css">
+
+    <style>
+        :root {
+            --gap: 20px;
+            --card-pad: 20px;
+            --panel-h: 252px;
+            --right-gutter: 20px;
+            --bg-grad-start: #D8E5FD;
+            --bg-grad-end: #86AFF9;
+            --blue: #256EF4;
+            --gray-1: #F6F6F6;
+            --gray-2: #E3E3E3;
+            --text: #000;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Spoqa Han Sans Neo', Pretendard, system-ui, -apple-system, sans-serif;
+            background: linear-gradient(180deg, var(--bg-grad-start) 0%, var(--bg-grad-end) 100%);
+            background-attachment: fixed;
+        }
+
+        .right-sky {
+            position: fixed;
+            inset: auto 0 0 auto;
+            top: 0;
+            right: 0;
+            width: var(--right-gutter);
+            height: 100vh;
+            background: linear-gradient(180deg, var(--bg-grad-start) 0%, var(--bg-grad-end) 100%);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .page {
+            display: flex;
+            flex-direction: column;
+            gap: var(--gap);
+            padding: var(--gap);
+            padding-right: calc(var(--gap) + var(--right-gutter));
+            background: transparent;
+        }
+
+        .main-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, .08);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .split {
+            display: flex;
+            flex-direction: row;
+            gap: var(--gap);
+            align-items: flex-start;
+            flex-wrap: nowrap;
+        }
+
+        .left-col,
+        .right-col {
+            flex: 1 1 50%;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .bottom {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            align-items: flex-start;
+            flex-wrap: nowrap;
+        }
+
+        .mission-col,
+        .result-col {
+            flex: 1 1 50%;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0px;
+        }
+
+        .title-bar {
+            height: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-bar .wrap {
+            flex: 1 1 0;
+            padding: 8px 10px;
+            background: #D8E5FD;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-bar .left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .label-chip {
+            padding: 4px 10px;
+            background: #fff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--blue);
+            font: 700 20px 'Spoqa Han Sans Neo';
+            line-height: 28px;
+        }
+
+        .title-txt {
+            color: #000;
+            font: 700 20px 'Spoqa Han Sans Neo';
+            line-height: 28px;
+        }
+
+        .webgl {
+            height: 552px;
+            border-radius: 8px;
+            border: 1px solid var(--gray-2);
+            overflow: hidden;
+            position: relative;
+            background: #000;
+        }
+
+        #unity-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: #000;
+        }
+
+        .hud-badge {
+            position: absolute;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .hud-left {
+            left: 8px;
+            top: 8px;
+        }
+
+        .hud-right {
+            right: 8px;
+            top: 8px;
+        }
+
+        .hud-card {
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, .35);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff;
+        }
+
+        .round-36 {
+            width: 36px;
+            height: 36px;
+            background: #D9D9D9;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* ★★★ 파일 탐색기 + 에디터 영역 ★★★ */
+        .editor-area {
+            height: 632px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* 파일 탐색기 + Monaco 에디터를 나란히 배치 */
+        .code-workspace {
+            flex: 1 1 auto;
+            display: flex;
+            gap: 0;
+            min-height: 0;
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--gray-2);
+        }
+
+        /* 파일 탐색기 */
+        .file-explorer {
+            width: 220px;
+            background: #252526;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #3e3e42;
+        }
+
+        .explorer-header {
+            padding: 8px 12px;
+            background: #2d2d30;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .explorer-title {
+            font: 600 13px 'Spoqa Han Sans Neo';
+            color: #cccccc;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .explorer-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            width: 24px;
+            height: 24px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+            color: #cccccc;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .icon-btn:hover {
+            background: #3e3e42;
+        }
+
+        /* 파일 트리 */
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 4px;
+        }
+
+        .file-tree::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .file-tree::-webkit-scrollbar-track {
+            background: #252526;
+        }
+
+        .file-tree::-webkit-scrollbar-thumb {
+            background: #424242;
+            border-radius: 4px;
+        }
+
+        .file-item,
+        .folder-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #cccccc;
+            font: 400 13px 'Spoqa Han Sans Neo';
+            user-select: none;
+            border-radius: 4px;
+            margin: 2px 0;
+        }
+
+        .file-item:hover,
+        .folder-item:hover {
+            background: #2a2d2e;
+        }
+
+        .file-item.active {
+            background: #094771;
+            color: #fff;
+        }
+
+        .folder-item {
+            font-weight: 500;
+        }
+
+        .folder-item .arrow {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.2s;
+            color: #cccccc;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .folder-item.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .folder-children {
+            padding-left: 16px;
+            display: none;
+        }
+
+        .folder-item.open+.folder-children {
+            display: block;
+        }
+
+        /* 파일/폴더 아이콘 */
+        .file-icon,
+        .folder-icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        /* 컨텍스트 메뉴 */
+        .context-menu {
+            position: fixed;
+            background: #252526;
+            border: 1px solid #454545;
+            border-radius: 5px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            z-index: 10000;
+            min-width: 180px;
+            padding: 4px 0;
+        }
+
+        .context-menu-item {
+            padding: 8px 16px;
+            color: #cccccc;
+            font: 400 13px 'Spoqa Han Sans Neo';
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .context-menu-item:hover {
+            background: #094771;
+            color: #fff;
+        }
+
+        .context-menu-item.danger:hover {
+            background: #c72e2e;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: #454545;
+            margin: 4px 0;
+        }
+
+        /* 에디터 탭 */
+        .editor-tabs {
+            display: flex;
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            overflow-x: auto;
+            height: 35px;
+        }
+
+        .editor-tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .editor-tabs::-webkit-scrollbar-thumb {
+            background: #424242;
+        }
+
+        .editor-tab {
+            padding: 8px 12px;
+            background: #2d2d30;
+            color: #969696;
+            font: 400 13px 'Spoqa Han Sans Neo';
+            border-right: 1px solid #3e3e42;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            min-width: 100px;
+        }
+
+        .editor-tab.active {
+            background: #1e1e1e;
+            color: #fff;
+        }
+
+        .editor-tab:hover:not(.active) {
+            background: #2a2d2e;
+        }
+
+        .editor-tab .close {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
+            margin-left: auto;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .editor-tab .close:hover {
+            background: #555;
+            opacity: 1;
+        }
+
+        /* 에디터 영역 */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .codebox {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            background: #1e1e1e;
+        }
+
+        #monaco {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 16px;
+        }
+
+        .btn {
+            flex: 1 1 0;
+            height: 48px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font: 500 16px 'Spoqa Han Sans Neo';
+        }
+
+        .btn.run {
+            background: #256EF4;
+            color: #fff;
+        }
+
+        .btn.copy {
+            background: #D8E5FD;
+            outline: 1px #0B50D0 solid;
+            color: #0B50D0;
+        }
+
+        .mission-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mission-title {
+            font: 700 20px 'Spoqa Han Sans Neo';
+        }
+
+        .mission-tabs {
+            padding: 4px 6px;
+            background: #D8E5FD;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+        }
+
+        .mission-tabs .slot {
+            width: 71px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #646464;
+            font: 500 14px 'Spoqa Han Sans Neo';
+            padding: 4px 8px;
+        }
+
+        .mission-tabs .slot.active {
+            background: #fff;
+            color: var(--blue);
+            border-radius: 100px;
+            font-weight: 700;
+        }
+
+        .nav-circles {
+            display: flex;
+            gap: 6px;
+        }
+
+        .nav-circles .circle {
+            width: 26px;
+            height: 26px;
+            background: #D8D8D8;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mission-box,
+        .result-box {
+            height: var(--panel-h);
+            padding: 20px;
+            background: #F6F6F6;
+            border-radius: 8px;
+            outline: 1px var(--gray-2) solid;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: auto;
+        }
+
+        .result-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            gap: 12px;
+            flex-wrap: nowrap;
+        }
+
+        .btn-gray {
+            height: 36px;
+            padding: 0 12px;
+            background: #787878;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font: 500 14px 'Spoqa Han Sans Neo';
+            white-space: nowrap;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="right-sky"></div>
+
+    <div class="page">
+        <main class="main">
+            <section class="main-card">
+                <div class="split">
+                    <div class="left-col">
+                        <div class="title-bar">
+                            <div class="wrap" style="background:transparent; padding:0;">
+                                <div class="left">
+                                    <div class="label-chip">과정 4-1</div>
+                                    <div class="title-txt">아크 원자로 복원</div>
+                                </div>
+                                <div class="right">
+                                    <div style="padding:2px 10px; background:#F6F6F6; border-radius:50px;">
+                                        <span style="color:#33363D; font:400 12px Pretendard;">난이도 중</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="webgl">
+                            <canvas id="unity-canvas" tabindex="-1"></canvas>
+                            <div class="hud-badge hud-left">
+                                <div class="hud-card">
+                                    <div class="round-36" style="background:#86AFF9;"></div>
+                                    <div style="display:flex; flex-direction:column; gap:4px;">
+                                        <div style="color:#fff; font:700 14px 'Spoqa Han Sans Neo'">감귤</div>
+                                        <div class="pill"
+                                            style="align-self:flex-start; background:#C0C0C0; color:#33363D; font-weight:600;">
+                                            Lv.3</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="hud-badge hud-right">
+                                <div class="hud-card team" style="gap:8px;">
+                                    <div style="width:36px; height:36px; background:#86AFF9; border-radius:4px;"></div>
+                                    <div style="color:#fff; font:600 14px 'Spoqa Han Sans Neo'">Team 1</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ★★★ 코드 에디터 영역 (파일 탐색기 추가) ★★★ -->
+                    <div class="right-col">
+                        <div style="padding:8px 6px; font:700 20px 'Spoqa Han Sans Neo'">코드 에디터</div>
+                        <div class="editor-area">
+                            <div class="code-workspace">
+                                <!-- 좌측: 파일 탐색기 -->
+                                <div class="file-explorer">
+                                    <div class="explorer-header">
+                                        <span class="explorer-title">파일</span>
+                                        <div class="explorer-actions">
+                                            <button id="btnNewFile" class="icon-btn" title="새 파일">+</button>
+                                            <button id="btnNewFolder" class="icon-btn" title="새 폴더">📁</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="file-tree" id="fileTree">
+                                        <!-- JavaScript로 동적 생성 -->
+                                    </div>
+                                </div>
+
+                                <!-- 우측: Monaco Editor -->
+                                <div class="editor-container">
+                                    <div class="editor-tabs" id="editorTabs">
+                                        <!-- 열린 파일 탭들 -->
+                                    </div>
+                                    <div class="codebox">
+                                        <div id="monaco"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="btn-row">
+                                <div id="btnCopy" class="btn copy">코드 복사</div>
+                                <div id="btnRun" class="btn run">코드 실행</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom">
+                    <div class="mission-col">
+                        <div class="mission-head">
+                            <div style="display:flex; align-items:center; gap:32px;">
+                                <div class="mission-title">미션</div>
+                                <div class="mission-tabs">
+                                    <div class="slot active">수행 과제</div>
+                                    <div class="slot">세부 내용</div>
+                                    <div class="slot">제약 조건</div>
+                                    <div class="slot">개발 환경</div>
+                                    <div class="slot">획득 역량</div>
+                                </div>
+                            </div>
+                            <div class="nav-circles">
+                                <div class="circle" style="background:#A1A1A1;"></div>
+                                <div class="circle" style="background:#A1A1A1;"></div>
+                            </div>
+                        </div>
+
+                        <div class="mission-box">
+                            <div style="color:#000; font:400 16px 'Spoqa Han Sans Neo'">
+                                <p>1. 관리 로봇에 접속하기</p>
+                                <p style="margin-left:20px; margin-top:-10px; color:#646464;">노트북을 사용하여 관리 로봇에 접속하세요.
+                                </p>
+                                <p>2. 암호 해제하기</p>
+                                <p style="margin-left:20px; margin-top:-10px; color:#646464;">Hello, World!를 출력해 로봇의 보안
+                                    시스템을 해제하세요.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-col">
+                        <div class="result-head">
+                            <div style="font:700 20px 'Spoqa Han Sans Neo'">결과</div>
+                            <div class="btn-gray" id="btnClearLog">로그 삭제</div>
+                        </div>
+                        <div class="result-box">
+                            <div id="logArea" style="color:#646464; font:400 16px 'Spoqa Han Sans Neo'">[ 실행 로그 자리 ]
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="Build/Verts_Test.loader.js"></script>
+    <script>
+        // Monaco Editor CDN 로드
+        window.require = { paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.min.js"></script>
+
+    <!-- ★★★ 파일 관리 시스템 ★★★ -->
+    <script>
+        // 파일 관리자 클래스
+        class FileManager {
+            constructor() {
+                this.files = this.loadFromStorage() || {
+                    'Main/main.py': '# 여기에 코드를 작성하세요.\nprint("Hello, World!")\n'
+                };
+                this.currentFile = 'Main/main.py';
+                this.openTabs = ['Main/main.py'];
+                this.folders = new Set(['Main']);
+            }
+
+            loadFromStorage() {
+                try {
+                    const data = localStorage.getItem('projectFiles');
+                    if (data) {
+                        const folders = localStorage.getItem('projectFolders');
+                        if (folders) {
+                            this.folders = new Set(JSON.parse(folders));
+                        }
+                        return JSON.parse(data);
+                    }
+                    return null;
+                } catch {
+                    return null;
+                }
+            }
+
+            saveToStorage() {
+                try {
+                    localStorage.setItem('projectFiles', JSON.stringify(this.files));
+                    const foldersArray = Array.from(this.folders);
+                    localStorage.setItem('projectFolders', JSON.stringify(foldersArray));
+                } catch (e) {
+                    console.error('저장 실패:', e);
+                }
+            }
+
+            createFile(name, parent = '') {
+                const fullPath = parent ? `${parent}/${name}` : name;
+                if (this.files[fullPath]) {
+                    alert('파일이 이미 존재합니다.');
+                    return false;
+                }
+                this.files[fullPath] = '';
+                this.saveToStorage();
+                return fullPath;
+            }
+
+            deleteFile(path) {
+                if (!confirm(`${path}를 삭제하시겠습니까?`)) return false;
+                delete this.files[path];
+                this.saveToStorage();
+
+                const idx = this.openTabs.indexOf(path);
+                if (idx > -1) {
+                    this.openTabs.splice(idx, 1);
+                }
+                if (this.currentFile === path && this.openTabs.length > 0) {
+                    this.currentFile = this.openTabs[0];
+                }
+                return true;
+            }
+
+            renameFile(oldPath, newName) {
+                if (this.files[newName]) {
+                    alert('이미 존재하는 이름입니다.');
+                    return false;
+                }
+                this.files[newName] = this.files[oldPath];
+                delete this.files[oldPath];
+
+                const idx = this.openTabs.indexOf(oldPath);
+                if (idx > -1) {
+                    this.openTabs[idx] = newName;
+                }
+                if (this.currentFile === oldPath) {
+                    this.currentFile = newName;
+                }
+                this.saveToStorage();
+                return true;
+            }
+
+            getContent(path) {
+                return this.files[path] || '';
+            }
+
+            setContent(path, content) {
+                this.files[path] = content;
+                this.saveToStorage();
+            }
+
+            createFolder(name, parent = '') {
+                const fullPath = parent ? `${parent}/${name}` : name;
+                if (this.folders.has(fullPath)) {
+                    alert('폴더가 이미 존재합니다.');
+                    return false;
+                }
+                this.folders.add(fullPath);
+                this.saveToStorage();
+                return fullPath;
+            }
+
+            deleteFolder(path) {
+                // 폴더 내 파일 확인
+                const filesInFolder = Object.keys(this.files).filter(file => file.startsWith(path + '/'));
+                const hasFiles = filesInFolder.length > 0;
+
+                const message = hasFiles
+                    ? `${path} 폴더와 내부의 모든 파일(${filesInFolder.length}개)을 삭제하시겠습니까?`
+                    : `${path} 폴더를 삭제하시겠습니까?`;
+
+                if (!confirm(message)) return false;
+
+                // 폴더 내 모든 파일 삭제
+                filesInFolder.forEach(file => {
+                    delete this.files[file];
+                    // 열린 탭에서도 제거
+                    const idx = this.openTabs.indexOf(file);
+                    if (idx > -1) {
+                        this.openTabs.splice(idx, 1);
+                    }
+                });
+
+                // 하위 폴더도 삭제
+                const foldersToDelete = Array.from(this.folders).filter(folder =>
+                    folder === path || folder.startsWith(path + '/')
+                );
+                foldersToDelete.forEach(folder => this.folders.delete(folder));
+
+                // 현재 파일이 삭제된 경우 다른 파일 열기
+                if (filesInFolder.includes(this.currentFile)) {
+                    const nextFile = this.openTabs[0] || Object.keys(this.files)[0];
+                    if (nextFile) {
+                        this.currentFile = nextFile;
+                    } else {
+                        this.currentFile = null;
+                    }
+                }
+
+                this.saveToStorage();
+                return true;
+            }
+
+            renameFolder(oldPath, newPath) {
+                if (this.folders.has(newPath)) {
+                    alert('이미 존재하는 폴더 이름입니다.');
+                    return false;
+                }
+
+                // 폴더 이름 변경
+                this.folders.delete(oldPath);
+                this.folders.add(newPath);
+
+                // 하위 폴더 경로 업데이트
+                const subFolders = Array.from(this.folders).filter(folder =>
+                    folder.startsWith(oldPath + '/')
+                );
+                subFolders.forEach(folder => {
+                    this.folders.delete(folder);
+                    const newSubPath = folder.replace(oldPath, newPath);
+                    this.folders.add(newSubPath);
+                });
+
+                // 폴더 내 파일 경로 업데이트
+                const filesInFolder = Object.keys(this.files).filter(file =>
+                    file.startsWith(oldPath + '/')
+                );
+                filesInFolder.forEach(file => {
+                    const newFilePath = file.replace(oldPath, newPath);
+                    this.files[newFilePath] = this.files[file];
+                    delete this.files[file];
+
+                    // 열린 탭 경로 업데이트
+                    const idx = this.openTabs.indexOf(file);
+                    if (idx > -1) {
+                        this.openTabs[idx] = newFilePath;
+                    }
+
+                    // 현재 파일 경로 업데이트
+                    if (this.currentFile === file) {
+                        this.currentFile = newFilePath;
+                    }
+                });
+
+                this.saveToStorage();
+                return true;
+            }
+
+            deleteFolder(path) {
+                // 폴더 내 파일이 있는지 확인
+                const hasFiles = Object.keys(this.files).some(filePath =>
+                    filePath.startsWith(path + '/')
+                );
+
+                if (hasFiles) {
+                    if (!confirm(`${path} 폴더와 내부의 모든 파일을 삭제하시겠습니까?`)) {
+                        return false;
+                    }
+                    // 폴더 내 모든 파일 삭제
+                    Object.keys(this.files).forEach(filePath => {
+                        if (filePath.startsWith(path + '/')) {
+                            delete this.files[filePath];
+                            // 열려있는 탭에서도 제거
+                            const idx = this.openTabs.indexOf(filePath);
+                            if (idx > -1) {
+                                this.openTabs.splice(idx, 1);
+                            }
+                        }
+                    });
+                } else {
+                    if (!confirm(`${path} 폴더를 삭제하시겠습니까?`)) {
+                        return false;
+                    }
+                }
+
+                // 폴더 삭제
+                this.folders.delete(path);
+
+                // 하위 폴더도 삭제
+                Array.from(this.folders).forEach(folder => {
+                    if (folder.startsWith(path + '/')) {
+                        this.folders.delete(folder);
+                    }
+                });
+
+                // 현재 파일이 삭제된 경우 다른 파일로 전환
+                if (this.currentFile.startsWith(path + '/')) {
+                    const nextFile = this.openTabs[0] || Object.keys(this.files)[0];
+                    if (nextFile) {
+                        this.currentFile = nextFile;
+                    }
+                }
+
+                this.saveToStorage();
+                return true;
+            }
+
+            getFileStructure() {
+                const structure = { files: [], folders: {} };
+
+                // 폴더 구조 생성
+                this.folders.forEach(folder => {
+                    const parts = folder.split('/');
+                    let current = structure.folders;
+                    let path = '';
+
+                    parts.forEach((part, idx) => {
+                        path = path ? `${path}/${part}` : part;
+                        if (!current[part]) {
+                            current[part] = {
+                                name: part,
+                                path: path,
+                                files: [],
+                                folders: {}
+                            };
+                        }
+                        current = current[part].folders;
+                    });
+                });
+
+                // 파일 배치
+                Object.keys(this.files).forEach(path => {
+                    const parts = path.split('/');
+                    if (parts.length === 1) {
+                        structure.files.push({ name: path, path: path });
+                    } else {
+                        let current = structure.folders;
+                        for (let i = 0; i < parts.length - 1; i++) {
+                            if (current[parts[i]]) {
+                                if (i === parts.length - 2) {
+                                    current[parts[i]].files.push({
+                                        name: parts[parts.length - 1],
+                                        path: path
+                                    });
+                                }
+                                current = current[parts[i]].folders;
+                            }
+                        }
+                    }
+                });
+
+                return structure;
+            }
+        }
+
+        // 전역 인스턴스
+        window.fileManager = new FileManager();
+        let editor = null;
+
+        // 파일 트리 렌더링
+        function renderFileTree() {
+            const structure = window.fileManager.getFileStructure();
+            const container = document.getElementById('fileTree');
+            container.innerHTML = '';
+
+            // 루트 파일
+            structure.files.forEach(file => {
+                const item = createFileElement(file.name, file.path);
+                container.appendChild(item);
+            });
+
+            // 폴더
+            Object.values(structure.folders).forEach(folder => {
+                const folderEl = createFolderElement(folder);
+                container.appendChild(folderEl);
+            });
+        }
+
+        function createFileElement(name, path) {
+            const div = document.createElement('div');
+            div.className = 'file-item';
+            if (path === window.fileManager.currentFile) {
+                div.classList.add('active');
+            }
+
+            const ext = name.split('.').pop();
+            const icon = ext === 'py' ? '🐍' : '📄';
+
+            div.innerHTML = `
+                <span class="file-icon">${icon}</span>
+                <span>${name}</span>
+            `;
+
+            div.addEventListener('click', () => openFile(path));
+            div.addEventListener('contextmenu', (e) => showContextMenu(e, path, 'file'));
+
+            return div;
+        }
+
+        function createFolderElement(folderData) {
+            const container = document.createElement('div');
+
+            const folder = document.createElement('div');
+            folder.className = 'folder-item';
+            folder.innerHTML = `
+                <span class="arrow">▶</span>
+                <span class="folder-icon">📁</span>
+                <span>${folderData.name}</span>
+            `;
+
+            const children = document.createElement('div');
+            children.className = 'folder-children';
+
+            // 자식 파일들
+            folderData.files.forEach(file => {
+                const fileEl = createFileElement(file.name, file.path);
+                children.appendChild(fileEl);
+            });
+
+            // 자식 폴더들
+            Object.values(folderData.folders).forEach(subFolder => {
+                const subFolderEl = createFolderElement(subFolder);
+                children.appendChild(subFolderEl);
+            });
+
+            folder.addEventListener('click', (e) => {
+                // 우클릭이 아닐 때만 토글
+                if (e.button === 0) {
+                    e.stopPropagation();
+                    folder.classList.toggle('open');
+                }
+            });
+
+            folder.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showContextMenu(e, folderData.path, 'folder');
+            });
+
+            container.appendChild(folder);
+            container.appendChild(children);
+
+            return container;
+        }
+
+        // 파일 열기
+        function openFile(path) {
+            window.fileManager.currentFile = path;
+
+            if (!window.fileManager.openTabs.includes(path)) {
+                window.fileManager.openTabs.push(path);
+            }
+
+            const content = window.fileManager.getContent(path);
+            if (editor) {
+                editor.setValue(content);
+            }
+
+            renderFileTree();
+            renderTabs();
+        }
+
+        // 탭 렌더링
+        function renderTabs() {
+            const container = document.getElementById('editorTabs');
+            container.innerHTML = '';
+
+            window.fileManager.openTabs.forEach(path => {
+                const tab = document.createElement('div');
+                tab.className = 'editor-tab';
+                if (path === window.fileManager.currentFile) {
+                    tab.classList.add('active');
+                }
+
+                const name = path.split('/').pop();
+                const ext = name.split('.').pop();
+                const icon = ext === 'py' ? '🐍' : '📄';
+
+                tab.innerHTML = `
+                    <span>${icon} ${name}</span>
+                    <span class="close" data-path="${path}">×</span>
+                `;
+
+                tab.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('close')) {
+                        openFile(path);
+                    }
+                });
+
+                tab.querySelector('.close').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    closeTab(path);
+                });
+
+                container.appendChild(tab);
+            });
+        }
+
+        // 탭 닫기
+        function closeTab(path) {
+            const idx = window.fileManager.openTabs.indexOf(path);
+            if (idx > -1) {
+                window.fileManager.openTabs.splice(idx, 1);
+            }
+
+            if (window.fileManager.currentFile === path) {
+                const nextFile = window.fileManager.openTabs[0] || Object.keys(window.fileManager.files)[0];
+                if (nextFile) {
+                    openFile(nextFile);
+                } else if (editor) {
+                    editor.setValue('');
+                }
+            }
+
+            renderTabs();
+        }
+
+        // 컨텍스트 메뉴
+        function showContextMenu(e, path, type) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const existing = document.querySelector('.context-menu');
+            if (existing) existing.remove();
+
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px';
+
+            if (type === 'file') {
+                menu.innerHTML = `
+                    <div class="context-menu-item" data-action="rename">✏️ 이름 바꾸기</div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item danger" data-action="delete">🗑️ 삭제</div>
+                `;
+            } else if (type === 'folder') {
+                menu.innerHTML = `
+                    <div class="context-menu-item" data-action="newfile">📄 새 파일</div>
+                    <div class="context-menu-item" data-action="newfolder">📁 새 폴더</div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item" data-action="renamefolder">✏️ 이름 바꾸기</div>
+                    <div class="context-menu-item danger" data-action="deletefolder">🗑️ 폴더 삭제</div>
+                `;
+            }
+
+            menu.addEventListener('click', (e) => {
+                const action = e.target.dataset.action;
+
+                if (action === 'delete') {
+                    if (window.fileManager.deleteFile(path)) {
+                        renderFileTree();
+                        renderTabs();
+                    }
+                } else if (action === 'rename') {
+                    const newName = prompt('새 이름:', path);
+                    if (newName && window.fileManager.renameFile(path, newName)) {
+                        renderFileTree();
+                        renderTabs();
+                    }
+                } else if (action === 'newfile') {
+                    const name = prompt('파일 이름:');
+                    if (name) {
+                        const newPath = window.fileManager.createFile(name, path);
+                        if (newPath) {
+                            renderFileTree();
+                            openFile(newPath);
+                        }
+                    }
+                } else if (action === 'newfolder') {
+                    const name = prompt('폴더 이름:');
+                    if (name) {
+                        window.fileManager.createFolder(name, path);
+                        renderFileTree();
+                    }
+                } else if (action === 'renamefolder') {
+                    const oldName = path.split('/').pop();
+                    const newName = prompt('새 폴더 이름:', oldName);
+                    if (newName && newName !== oldName) {
+                        const parent = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '';
+                        const newPath = parent ? `${parent}/${newName}` : newName;
+                        if (window.fileManager.renameFolder(path, newPath)) {
+                            renderFileTree();
+                            renderTabs();
+                        }
+                    }
+                } else if (action === 'deletefolder') {
+                    if (window.fileManager.deleteFolder(path)) {
+                        renderFileTree();
+                        renderTabs();
+                    }
+                }
+                menu.remove();
+            });
+
+            document.body.appendChild(menu);
+
+            setTimeout(() => {
+                document.addEventListener('click', () => {
+                    if (menu.parentElement) menu.remove();
+                }, { once: true });
+            }, 0);
+        }
+
+        // 새 파일/폴더 생성
+        document.getElementById('btnNewFile').addEventListener('click', () => {
+            const name = prompt('파일 이름 (예: test.py):');
+            if (name) {
+                const path = window.fileManager.createFile(name);
+                if (path) {
+                    renderFileTree();
+                    openFile(path);
+                }
+            }
+        });
+
+        document.getElementById('btnNewFolder').addEventListener('click', () => {
+            const name = prompt('폴더 이름:');
+            if (name) {
+                if (window.fileManager.createFolder(name)) {
+                    renderFileTree();
+                }
+            }
+        });
+
+        // 코드 복사
+        document.getElementById('btnCopy').addEventListener('click', () => {
+            if (editor) {
+                const code = editor.getValue();
+                navigator.clipboard.writeText(code).then(() => {
+                    alert('코드가 클립보드에 복사되었습니다.');
+                });
+            }
+        });
+
+        // 코드 실행 (예시)
+        document.getElementById('btnRun').addEventListener('click', () => {
+            if (editor) {
+                const code = editor.getValue();
+                const logArea = document.getElementById('logArea');
+                logArea.innerHTML = `
+                    <div style="color:#000; font-weight:600;">실행 중...</div>
+                    <pre style="margin-top:10px; color:#646464;">${code}</pre>
+                `;
+                // 실제 실행 로직은 백엔드 API 연동 필요
+            }
+        });
+
+        // 로그 삭제
+        document.getElementById('btnClearLog').addEventListener('click', () => {
+            document.getElementById('logArea').textContent = '[ 실행 로그가 삭제되었습니다 ]';
+        });
+
+        // Monaco Editor 마운트
+        function mountMonaco() {
+            require(['vs/editor/editor.main'], function () {
+                const mountEl = document.getElementById('monaco');
+                editor = monaco.editor.create(mountEl, {
+                    value: window.fileManager.getContent(window.fileManager.currentFile),
+                    language: 'python',
+                    theme: 'vs-dark',
+                    automaticLayout: true,
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    padding: { top: 12, bottom: 12 }
+                });
+
+                // 에디터 내용 변경시 저장
+                editor.onDidChangeModelContent(() => {
+                    const content = editor.getValue();
+                    window.fileManager.setContent(window.fileManager.currentFile, content);
+                });
+
+                // 초기 렌더링
+                renderFileTree();
+                renderTabs();
+
+                // Main 폴더를 기본으로 열린 상태로 설정
+                setTimeout(() => {
+                    const mainFolder = document.querySelector('.folder-item');
+                    if (mainFolder) {
+                        mainFolder.classList.add('open');
+                    }
+                }, 100);
+            });
+        }
+
+        if (window.require && window.require.config) {
+            mountMonaco();
+        }
+    </script>
+
+    <!-- Unity WebGL 초기화 -->
+    <script>
+        var canvas = document.querySelector("#unity-canvas");
+
+        function unityShowBanner(msg, type) {
+            console.log('[Unity Banner]', type, msg);
+        }
+
+        var buildUrl = "Build";
+        var loaderUrl = buildUrl + "/Verts_Test.loader.js";
+        var config = {
+            arguments: [],
+            dataUrl: buildUrl + "/Verts_Test.data",
+            frameworkUrl: buildUrl + "/Verts_Test.framework.js",
+            codeUrl: buildUrl + "/Verts_Test.wasm",
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "DefaultCompany",
+            productName: "PBL_test",
+            productVersion: "0.1.0",
+            showBanner: unityShowBanner,
+        };
+
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            var meta = document.createElement('meta');
+            meta.name = 'viewport';
+            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+            document.getElementsByTagName('head')[0].appendChild(meta);
+            canvas.className = "unity-mobile";
+        } else {
+            canvas.style.width = "960px";
+            canvas.style.height = "600px";
+        }
+
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+            createUnityInstance(canvas, config, (progress) => {
+                console.log('Unity Loading:', Math.round(progress * 100) + '%');
+            }).then((unityInstance) => {
+                console.log('Unity Loaded!');
+            }).catch((message) => {
+                console.error('Unity Error:', message);
+            });
+        };
+        document.body.appendChild(script);
+    </script>
+</body>
+
+</html>
